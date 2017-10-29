@@ -1,17 +1,17 @@
 from pyqtree import Index
 from Dot import Dot
 
-def create_quadtree(input):
+def create_quadtree(file):
     # go through the file and create a dot object for each line and add it to a list
     dot_list = []
-    file = open(input, "r")
-    nr_data_point = next(file)
+
     for line in file:
         line = line.split()
         x = float(line[0])
         y = float(line[1])
         label = line[2]
         dot_list.append(Dot(label, (x, y, x, y)))
+    file.close()
 
     # add all dots to the quadtree
     spindex = Index(bbox=(0, 0, 1, 1))
@@ -21,12 +21,22 @@ def create_quadtree(input):
     return spindex
 
 def algorithm(input, grid_size, d_max, k_min):
+    d_max = d_max/grid_size
     # insert the dot_list into a quadtree
-    quad_tree = create_quadtree(input)
+    file = open(input, "r")
+    nr_data_point = int(next(file))
+    quad_tree = create_quadtree(file)
     output_quadtree = Index(bbox=(0, 0, 1, 1))
 
     #determine k
-    k = 8
+    counter = 0
+    for y in range(grid_size):
+        for x in range(grid_size):
+            current_cell = (x/grid_size, y/grid_size, (x+1)/grid_size, (y+1)/grid_size)
+            intersection = quad_tree.intersect(current_cell)
+            if len(intersection) >= k_min * int(nr_data_point/(grid_size*grid_size)):
+                counter+=1
+    k = int((nr_data_point/counter) * 0.9)
 
     # loop through the grid
     for y in range(grid_size):
@@ -109,7 +119,6 @@ def create_output(quad_tree, k, grid_size):
             current_cell = (x/grid_size, y/grid_size, (x+1)/grid_size, (y+1)/grid_size)
             # intersect on this rectangle, cell should only contain 1 entry
             cell = quad_tree.intersect(current_cell)
-            print("size of cell: %s" % (len(cell)))
             if len(cell) == 0:
                 if x < grid_size - 1:
                     output.write(",")
@@ -121,8 +130,7 @@ def create_output(quad_tree, k, grid_size):
         output.write("\n")
     output.close()
 
-algorithm("uniform-1024-2-42.txt", 10, 0.01, 0.75)
-
+algorithm("checker-50000-4-42.txt", 17, 0, 0.75)
 
 
 
